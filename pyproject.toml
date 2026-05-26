@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qci"
+version = "0.1.0"
+description = "Privacy-preserving computational-imaging crowd counter"
+requires-python = ">=3.11"
+dependencies = [
+    "torch>=2.1",
+    "torchvision>=0.16",
+    "numpy>=1.26",
+    "opencv-python>=4.8",
+    "matplotlib>=3.8",
+    "pandas>=2.1",
+    "scipy>=1.11",
+    "pyyaml>=6.0",
+    "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4", "pytest-cov>=4.1", "httpx>=0.25"]
+server = [
+    "fastapi>=0.104",
+    "uvicorn[standard]>=0.24",
+    "python-multipart>=0.0.6",
+    "httpx>=0.25",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["qci*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"

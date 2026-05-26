@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Delhi Election Queue Monitor</title>
+  <style>
+    :root {
+      --c-short:    #16a34a;
+      --c-moderate: #d97706;
+      --c-long:     #dc2626;
+      --c-bg:       #f1f5f9;
+      --c-card:     #ffffff;
+      --c-text:     #1e293b;
+      --c-muted:    #64748b;
+      --c-border:   #e2e8f0;
+      --c-badge-bg: #dcfce7;
+      --c-badge-tx: #15803d;
+      --radius:     12px;
+      --shadow:     0 1px 4px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--c-bg);
+      color: var(--c-text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #1e3a5f;
+      color: #fff;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    }
+    header h1 { font-size: 1.05rem; font-weight: 700; line-height: 1.3; }
+    header p  { font-size: .75rem; opacity: .7; margin-top: 2px; }
+    .privacy-badge {
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.3);
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: .75rem;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .privacy-badge:hover { background: rgba(255,255,255,.25); }
+
+    /* ── Main layout ── */
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 20px 16px 100px;
+    }
+
+    .section-label {
+      font-size: .7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--c-muted);
+      margin: 20px 0 10px;
+    }
+
+    /* ── Station card ── */
+    .card {
+      background: var(--c-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 12px;
+      overflow: hidden;
+      transition: box-shadow .2s;
+    }
+    .card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.12); }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px 10px;
+    }
+    .crowd-dot {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      box-shadow: 0 0 0 3px rgba(0,0,0,.06);
+    }
+    .dot-short    { background: var(--c-short); }
+    .dot-moderate { background: var(--c-moderate); }
+    .dot-long     { background: var(--c-long); }
+    .dot-unknown  { background: #cbd5e1; }
+
+    .card-title { font-size: .95rem; font-weight: 600; flex: 1; }
+    .updated-tag {
+      font-size: .7rem;
+      color: var(--c-muted);
+      white-space: nowrap;
+    }
+
+    .card-metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      padding: 0 16px 4px;
+    }
+    .metric { padding: 4px 0 8px; }
+    .metric-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .metric-label {
+      font-size: .7rem;
+      color: var(--c-muted);
+      margin-top: 2px;
+    }
+    .metric-value.short    { color: var(--c-short); }
+    .metric-value.moderate { color: var(--c-moderate); }
+    .metric-value.long     { color: var(--c-long); }
+
+    .sparkline-wrap {
+      padding: 2px 16px 14px;
+    }
+    .sparkline-label {
+      font-size: .65rem;
+      color: var(--c-muted);
+      margin-bottom: 3px;
+    }
+    canvas.sparkline {
+      display: block;
+      width: 100%;
+      height: 36px;
+      border-radius: 4px;
+    }
+
+    .no-data-msg {
+      padding: 20px 16px;
+      color: var(--c-muted);
+      font-size: .85rem;
+      text-align: center;
+    }
+
+    /* ── Privacy info box ── */
+    .privacy-box {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-top: 24px;
+      font-size: .8rem;
+      color: #166534;
+    }
+    .privacy-box h3 { font-size: .85rem; margin-bottom: 6px; }
+    .privacy-box p  { margin-top: 4px; opacity: .8; line-height: 1.5; }
+    .privacy-strength {
+      display: inline-block;
+      background: #dcfce7;
+      border-radius: 8px;
+      padding: 1px 8px;
+      font-weight: 700;
+    }
+
+    /* ── Loading / error states ── */
+    .loading {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--c-muted);
+    }
+    .error-banner {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: #991b1b;
+      font-size: .85rem;
+      margin-bottom: 16px;
+    }
+
+    /* ── Live indicator ── */
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: .7rem;
+      color: var(--c-short);
+      font-weight: 600;
+    }
+    .live-dot {
+      width: 7px; height: 7px;
+      background: var(--c-short);
+      border-radius: 50%;
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: .5; transform: scale(.8); }
+    }
+
+    @media (max-width: 400px) {
+      .card-metrics { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Delhi Election Queue Monitor</h1>
+    <p>Live crowd estimates at polling stations</p>
+  </div>
+  <span class="privacy-badge" title="View privacy details" onclick="scrollToPrivacy()">
+    🔒 Privacy Protected
+  </span>
+</header>
+
+<main>
+  <p class="section-label">
+    Polling Stations
+    <span class="live-badge" style="margin-left:8px" id="live-indicator" hidden>
+      <span class="live-dot"></span> LIVE
+    </span>
+  </p>
+
+  <div id="error-container"></div>
+  <div id="stations-container">
+    <div class="loading">Loading station data…</div>
+  </div>
+
+  <div class="privacy-box" id="privacy-section">
+    <h3>🔒 Privacy Protection</h3>
+    <p>Camera feeds are privacy-encoded before processing.
+       Faces cannot be recovered from stored data.</p>
+    <p id="privacy-detail">
+      Encoding strength: <span class="privacy-strength" id="encoding-strength-value">loading…</span>
+    </p>
+    <p>
+      Face detection rate: <span id="fdr-value">—</span>
+    </p>
+    <p style="margin-top:8px">
+      Optical encoding scrambles facial features while preserving crowd-count
+      information. The privacy–utility tradeoff is evaluated using the
+      Erlang-C queuing model and published-quality analysis.
+    </p>
+  </div>
+</main>
+
+<script>
+"use strict";
+
+// ── Configuration ──────────────────────────────────────────────────────────
+// When opened as file:// → connect to local dev server.
+// When served from FastAPI → use the same host.
+const API_BASE = (location.protocol === 'file:')
+  ? 'http://localhost:8000'
+  : `${location.protocol}//${location.host}`;
+const WS_PROTO = API_BASE.startsWith('https') ? 'wss' : 'ws';
+const WS_BASE  = `${WS_PROTO}://${API_BASE.split('//')[1]}`;
+
+// ── State ─────────────────────────────────────────────────────────────────
+const stationHistory = {};   // station_id → [{person_count, timestamp}, …]
+const wsConnections  = {};   // station_id → WebSocket
+
+// ── DOM helpers ───────────────────────────────────────────────────────────
+const $  = id => document.getElementById(id);
+const el = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
+
+function showError(msg) {
+  const b = el('div', 'error-banner');
+  b.textContent = '⚠ ' + msg;
+  $('error-container').appendChild(b);
+  setTimeout(() => b.remove(), 6000);
+}
+
+function scrollToPrivacy() {
+  $('privacy-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── Time helpers ──────────────────────────────────────────────────────────
+function timeAgo(isoStr) {
+  if (!isoStr) return 'never';
+  const diff = (Date.now() - new Date(isoStr).getTime()) / 1000;
+  if (diff < 60)   return `${Math.round(diff)}s ago`;
+  if (diff < 3600) return `${Math.round(diff / 60)} min ago`;
+  return `${Math.round(diff / 3600)}h ago`;
+}
+
+function crowdClass(level) {
+  if (level === 'short')    return 'short';
+  if (level === 'moderate') return 'moderate';
+  if (level === 'long')     return 'long';
+  return 'unknown';
+}
+
+function waitText(sec) {
+  if (sec == null) return '—';
+  const m = Math.round(sec / 60);
+  return m < 1 ? '<1 min' : `~${m} min`;
+}
+
+// ── Sparkline canvas ──────────────────────────────────────────────────────
+function drawSparkline(canvas, history) {
+  const W = canvas.offsetWidth || 280;
+  canvas.width  = W * devicePixelRatio;
+  canvas.height = 36 * devicePixelRatio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  const w = W, h = 36;
+  ctx.clearRect(0, 0, w, h);
+
+  const pts = (history || []).filter(p => p.person_count != null);
+  if (pts.length < 2) {
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = `10px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('no history data', w / 2, h / 2 + 4);
+    return;
+  }
+
+  const counts  = pts.map(p => p.person_count);
+  const maxC    = Math.max(...counts, 1);
+  const minC    = Math.min(...counts);
+  const range   = maxC - minC || 1;
+  const xS      = w / (pts.length - 1);
+  const pad     = 4;
+  const xp = i => i * xS;
+  const yp = v => h - pad - ((v - minC) / range) * (h - pad * 2);
+
+  // Gradient fill
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0,   'rgba(59,130,246,.25)');
+  grad.addColorStop(1,   'rgba(59,130,246,.02)');
+  ctx.beginPath();
+  ctx.moveTo(xp(0), h);
+  pts.forEach((p, i) => ctx.lineTo(xp(i), yp(p.person_count)));
+  ctx.lineTo(xp(pts.length - 1), h);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  pts.forEach((p, i) => i === 0
+    ? ctx.moveTo(xp(i), yp(p.person_count))
+    : ctx.lineTo(xp(i), yp(p.person_count)));
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth   = 1.5;
+  ctx.lineJoin    = 'round';
+  ctx.stroke();
+}
+
+// ── Card rendering ────────────────────────────────────────────────────────
+function renderCard(station, latest) {
+  const sid   = station.id;
+  const level = latest ? latest.crowd_level : null;
+  const cls   = crowdClass(level);
+  const hist  = stationHistory[sid] || [];
+
+  let card = document.getElementById('card-' + sid);
+  const isNew = !card;
+  if (isNew) {
+    card = el('div', 'card');
+    card.id = 'card-' + sid;
+  }
+
+  card.innerHTML = `
+    <div class="card-header">
+      <span class="crowd-dot dot-${cls}"></span>
+      <span class="card-title">${station.name}</span>
+      <span class="updated-tag" id="upd-${sid}">
+        ${latest ? timeAgo(latest.timestamp) : 'no data'}
+      </span>
+    </div>
+    ${latest ? `
+    <div class="card-metrics">
+      <div class="metric">
+        <div class="metric-value ${cls}">${waitText(latest.wait_expected_sec)}</div>
+        <div class="metric-label">expected wait</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value">${latest.queue_length_m != null ? latest.queue_length_m.toFixed(0) + ' m' : '—'}</div>
+        <div class="metric-label">queue length</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value">${latest.person_count != null ? Math.round(latest.person_count) : '—'}</div>
+        <div class="metric-label">people visible</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value" style="font-size:.95rem;text-transform:capitalize">${level || '—'}</div>
+        <div class="metric-label">crowd level</div>
+      </div>
+    </div>
+    <div class="sparkline-wrap">
+      <div class="sparkline-label">Person count — last 2 hours</div>
+      <canvas class="sparkline" id="spark-${sid}"></canvas>
+    </div>` : `<div class="no-data-msg">No data yet for this station.</div>`}
+  `;
+
+  if (isNew) {
+    $('stations-container').appendChild(card);
+  }
+
+  // Draw sparkline after DOM paint
+  if (latest) {
+    requestAnimationFrame(() => {
+      const cv = document.getElementById('spark-' + sid);
+      if (cv) drawSparkline(cv, hist);
+    });
+  }
+}
+
+function updateTimestamps() {
+  document.querySelectorAll('[id^="upd-"]').forEach(el => {
+    const sid = el.id.slice(4);
+    const hist = stationHistory[sid];
+    if (hist && hist.length) {
+      el.textContent = timeAgo(hist[hist.length - 1].timestamp);
+    }
+  });
+}
+
+// ── WebSocket ─────────────────────────────────────────────────────────────
+function connectWS(sid) {
+  if (wsConnections[sid]) return;
+  const url = `${WS_BASE}/ws/${sid}`;
+  const ws  = new WebSocket(url);
+  wsConnections[sid] = ws;
+
+  ws.onmessage = evt => {
+    let data;
+    try { data = JSON.parse(evt.data); } catch { return; }
+    if (data.ping) return;
+
+    // Append to local history
+    if (!stationHistory[sid]) stationHistory[sid] = [];
+    stationHistory[sid].push({ person_count: data.person_count, timestamp: data.timestamp });
+    // Keep last 24 points (2h at 5-min resolution)
+    if (stationHistory[sid].length > 24) stationHistory[sid].shift();
+
+    // Re-render card
+    const station = window._stationMeta[sid] || { id: sid, name: sid };
+    renderCard(station, data);
+    $('live-indicator').hidden = false;
+  };
+
+  ws.onclose = () => {
+    delete wsConnections[sid];
+    // Reconnect after 5 s
+    setTimeout(() => connectWS(sid), 5000);
+  };
+  ws.onerror = () => ws.close();
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+window._stationMeta = {};
+
+async function fetchStations() {
+  try {
+    const resp = await fetch(`${API_BASE}/stations`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const { stations } = await resp.json();
+
+    $('stations-container').innerHTML = '';
+
+    for (const s of stations) {
+      window._stationMeta[s.id] = s;
+
+      // Fetch 2h history
+      try {
+        const hr = await fetch(`${API_BASE}/stations/${s.id}`);
+        if (hr.ok) {
+          const detail = await hr.json();
+          stationHistory[s.id] = (detail.history || []).map(h => ({
+            person_count: h.person_count,
+            timestamp: h.timestamp,
+          }));
+        }
+      } catch {}
+
+      renderCard(s, s.latest);
+      connectWS(s.id);
+    }
+  } catch (err) {
+    $('stations-container').innerHTML = '';
+    showError(`Could not reach API at ${API_BASE} — is the server running?`);
+    console.error(err);
+  }
+}
+
+async function fetchPrivacy() {
+  try {
+    const r = await fetch(`${API_BASE}/stations/DL-001/privacy_check`);
+    if (!r.ok) return;
+    const d = await r.json();
+    $('encoding-strength-value').textContent = d.encoding_strength != null
+      ? d.encoding_strength.toFixed(2) : '—';
+    $('fdr-value').textContent = d.face_detection_rate != null
+      ? `${(d.face_detection_rate * 100).toFixed(1)}% detected`
+      : 'run privacy eval to measure';
+  } catch {}
+}
+
+// Refresh "X min ago" labels every 30 s
+setInterval(updateTimestamps, 30_000);
+
+fetchStations();
+fetchPrivacy();
+</script>
+</body>
+</html>

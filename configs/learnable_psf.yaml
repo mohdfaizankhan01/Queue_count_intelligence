@@ -1,0 +1,41 @@
+# Learnable PSF encoding configuration
+# NOTE: the learnable PSF requires end-to-end training to be meaningful.
+#       In sweep mode the PSF is randomly initialised (softmax-normalised)
+#       and strength controls the identity blend.
+seed: 42
+use_gpu: true
+batch_size: 4
+
+dataset:
+  name: synthetic
+  n_synthetic: 50
+  image_size: [256, 256]
+  max_count: 50
+  seed: 42
+
+encoding:
+  mode: learnable_psf
+  kernel_size: 31
+
+degradation:
+  enabled: false
+  gaussian_noise: 0.0
+  poisson_noise: 0.0
+  motion_blur: 0.0
+  motion_angle_deg: 0.0
+  low_light: 0.0
+  downsample: 0.0
+
+recovery:
+  mode: none
+
+counting:
+  mode: hog
+
+sweep:
+  strengths: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+  ablate_recovery: false
+
+output:
+  results_csv: results/learnable_psf_results.csv
+  plot_path: results/learnable_psf_sweep.png

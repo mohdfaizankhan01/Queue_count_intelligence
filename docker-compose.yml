@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - db_data:/app/results
+    environment:
+      - ENCODING_STRENGTH=${ENCODING_STRENGTH:-0.4}
+      - N_BOOTHS_DEFAULT=${N_BOOTHS_DEFAULT:-3}
+      - COUNTER_TYPE=${COUNTER_TYPE:-hog}
+      - AVG_SERVICE_TIME_SEC=${AVG_SERVICE_TIME_SEC:-120}
+      - DB_PATH=/app/results/history.db
+      - PRIVACY_RESULTS_CSV=/app/results/privacy_results.csv
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/stations')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  db_data:

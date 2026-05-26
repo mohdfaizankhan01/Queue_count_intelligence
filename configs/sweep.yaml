@@ -1,0 +1,76 @@
+# Default sweep configuration — runs defocus mode with synthetic data.
+# Override sections on the command line or copy and edit this file.
+seed: 42
+use_gpu: false              # set true if GPU is available
+batch_size: 1
+
+dataset:
+  name: synthetic           # "synthetic" works without any download
+  n_synthetic: 20
+  image_size: [256, 256]
+  max_count: 50
+  seed: 42
+  # For ShanghaiTech, set:
+  # name: shanghaitech
+  # root: /path/to/ShanghaiTech
+  # part: A
+  # split: test
+
+encoding:
+  mode: defocus             # defocus | coded_mask | learnable_psf
+  kernel_size: 31
+  sigma_max: 10.0
+  psf_shape: gaussian
+
+degradation:
+  enabled: false
+  gaussian_noise: 0.05
+  poisson_noise: 0.0
+  motion_blur: 0.0
+  motion_angle_deg: 0.0
+  low_light: 0.0
+  downsample: 0.0
+  seed: 42
+
+recovery:
+  mode: none                # none | wiener | unet
+  nsr: 0.01
+
+# Single-counter mode (default): one of hog | yolo | density | csrnet
+counting:
+  mode: hog
+
+# Multi-counter mode (--all-counters flag): list of counters to compare
+counters:
+  - name: hog
+    mode: hog
+  - name: yolo
+    mode: yolo
+    confidence_threshold: 0.4
+  - name: csrnet
+    mode: csrnet
+    pretrained_frontend: false  # set true to download VGG-16 ImageNet weights
+
+sweep:
+  strengths: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+  ablate_recovery: true
+
+# Layer 4 geometry settings
+geometry:
+  enabled: false            # set true with --geometry flag
+  camera:
+    height_m: 3.0
+    tilt_deg: 30.0
+    focal_length_px: 1200.0
+    image_width: 1920
+    image_height: 1080
+  bev_pixels_per_metre: 30.0
+  bev_coverage_m: [20.0, 30.0]
+  depth:
+    enabled: false          # set true to run MiDaS (~100 MB download)
+
+output:
+  results_csv: results/results.csv
+  plot_path: results/sweep_plot.png
+  counters_csv: results/counters_results.csv
+  counters_plot: results/sweep_counters.png

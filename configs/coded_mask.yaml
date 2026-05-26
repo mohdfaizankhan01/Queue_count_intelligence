@@ -1,0 +1,42 @@
+# Coded-aperture encoding configuration
+seed: 42
+use_gpu: true
+batch_size: 4
+
+dataset:
+  name: synthetic
+  n_synthetic: 50
+  image_size: [256, 256]
+  max_count: 50
+  seed: 42
+
+encoding:
+  mode: coded_mask
+  kernel_size: 31
+  coded_mask_seed: 42       # seed for the random binary aperture
+  # coded_mask_path: path/to/custom_mask.npy   # optional custom PSF file
+
+degradation:
+  enabled: false
+  gaussian_noise: 0.05
+  poisson_noise: 0.0
+  motion_blur: 0.0
+  motion_angle_deg: 0.0
+  low_light: 0.0
+  downsample: 0.0
+  seed: 42
+
+recovery:
+  mode: wiener
+  nsr: 0.01                 # noise-to-signal ratio for Wiener filter
+
+counting:
+  mode: hog
+
+sweep:
+  strengths: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+  ablate_recovery: true     # compare with/without Wiener restoration
+
+output:
+  results_csv: results/coded_mask_results.csv
+  plot_path: results/coded_mask_sweep.png
