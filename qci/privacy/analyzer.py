@@ -68,7 +68,9 @@ class PrivacyUtilityAnalyzer:
         Where to save the figure and CSV.
     counter_cfg:
         List of counter config dicts (same format as sweep.yaml ``counters``
-        list).  Defaults to a single HOG counter if None.
+        list).  Defaults to BlobCounter (works on synthetic ellipse images)
+        if None.  Use ``{"mode": "hog"}`` only when evaluating on real
+        person images — HOG returns 0 on synthetic data, giving a flat curve.
     n_images:
         Number of face images to use (keeps runtime manageable).
     encoder_mode:
@@ -84,10 +86,12 @@ class PrivacyUtilityAnalyzer:
         n_images: int = 100,
         encoder_mode: str = "defocus",
     ) -> None:
-        self.strengths = strengths or [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+        self.strengths = strengths or [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.counter_cfg = counter_cfg or [{"mode": "hog"}]
+        # Default: BlobCounter works on synthetic ellipse data.
+        # HOG returns 0 for all synthetic images → flat MAE curve.
+        self.counter_cfg = counter_cfg or [{"mode": "blob", "name": "blob"}]
         self.n_images = n_images
         self.encoder_mode = encoder_mode
 

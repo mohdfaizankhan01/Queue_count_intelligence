@@ -22,6 +22,9 @@ htmlcov/
 results/
 outputs/
 
+# Downloaded / sample images (binary assets)
+data/
+
 # Secrets
 .env
 

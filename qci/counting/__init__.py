@@ -1,4 +1,5 @@
 from .base import CrowdCounter
+from .blob import BlobCounter
 from .csrnet import CSRNetCounter
 from .density import DensityCounter          # backward-compat alias
 from .hog import HOGCounter
@@ -11,13 +12,20 @@ def build_counter(cfg: dict) -> CrowdCounter:
 
     ``cfg["mode"]`` selects the implementation:
 
-    * ``"hog"``     — OpenCV HOG + SVM detector (no training required)
+    * ``"blob"``    — background-subtraction blob counter (synthetic data)
+    * ``"hog"``     — OpenCV HOG + SVM detector (real person images)
     * ``"yolo"``    — YOLOv8n person detector (requires ``ultralytics``)
     * ``"density"`` or ``"csrnet"`` — CSRNet density-map counter
     """
     mode = cfg.get("mode", "hog")
 
-    if mode == "hog":
+    if mode == "blob":
+        return BlobCounter(
+            window_size=cfg.get("window_size", 3),
+            std_threshold=cfg.get("std_threshold", 11.0),
+            min_blob_area=cfg.get("min_blob_area", 6),
+        )
+    elif mode == "hog":
         return HOGCounter(
             win_stride=tuple(cfg.get("win_stride", [8, 8])),
             scale=cfg.get("scale", 1.05),
@@ -39,11 +47,12 @@ def build_counter(cfg: dict) -> CrowdCounter:
     else:
         raise ValueError(
             f"Unknown counter mode: {mode!r}. "
-            "Valid options: 'hog', 'yolo', 'density', 'csrnet'."
+            "Valid options: 'blob', 'hog', 'yolo', 'density', 'csrnet'."
         )
 
 
 __all__ = [
+    "BlobCounter",
     "CrowdCounter",
     "CSRNetCounter",
     "DensityCounter",
