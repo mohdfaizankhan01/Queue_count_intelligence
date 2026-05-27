@@ -24,6 +24,7 @@ outputs/
 
 # Downloaded / sample images (binary assets)
 data/
+*.zip
 
 # Secrets
 .env
